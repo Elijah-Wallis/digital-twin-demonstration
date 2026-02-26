@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseClient } from "@/lib/supabase";
-import { runDiagnostic, getMockDiagnosticResult, type McpDiagnosticResult } from "@/lib/mcp";
+import { runDiagnostic, getMockDiagnosticResult, type McpDiagnosticResult, type DeeperInput } from "@/lib/mcp";
+
+const deeperSchema = z.object({
+  staff_hourly_cost: z.number().min(0).optional(),
+  monthly_marketing_spend: z.number().min(0).optional(),
+  current_inventory_value: z.number().min(0).optional(),
+  csv_row_count: z.number().int().min(0).optional(),
+}).optional();
 
 const bodySchema = z.object({
   clinic_name: z.string().min(1),
@@ -10,6 +17,7 @@ const bodySchema = z.object({
   no_show_rate: z.number().min(0).max(100),
   avg_treatment_value: z.number().min(0),
   number_of_locations: z.number().int().min(1).default(1),
+  deeperData: deeperSchema,
 });
 
 async function generateNarrative(
@@ -80,14 +88,14 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const input = parsed.data;
+    const { deeperData, ...input } = parsed.data;
 
     let result: McpDiagnosticResult;
     try {
-      result = await runDiagnostic(input);
+      result = await runDiagnostic(input, deeperData as DeeperInput | undefined);
     } catch (mcpError) {
       console.warn("MCP diagnostic fallback:", mcpError);
-      result = getMockDiagnosticResult(input);
+      result = getMockDiagnosticResult(input, deeperData as DeeperInput | undefined);
     }
 
     const narrative = await generateNarrative(input.clinic_name, result);
@@ -126,6 +134,7 @@ export async function POST(request: Request) {
           projections: row.projections,
           narrative,
           hidden_leaks: result.hidden_leaks,
+          bottlenecks: result.bottlenecks,
           message:
             "Diagnostic completed; result could not be stored. Use the data below.",
         },
@@ -139,6 +148,7 @@ export async function POST(request: Request) {
       projections: row.projections,
       narrative,
       hidden_leaks: result.hidden_leaks,
+      bottlenecks: result.bottlenecks,
     });
   } catch (e) {
     console.error("Diagnostic API error:", e);
