@@ -1,12 +1,14 @@
 {
-  "name": "eve-diagnostic",
+  "name": "digital-twin-demonstration",
   "version": "0.1.0",
   "private": true,
+  "description": "Eve Digital Twin Demonstration – Free Clinic Autonomy Diagnostic Lead Magnet for Medspas, Dental Practices, and Plastic Surgery Clinics. Palantir-style ontology twin demo.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "demo": "npm run dev"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
