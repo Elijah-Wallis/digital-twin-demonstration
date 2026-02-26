@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { DiagnosticDashboard, type DiagnosticData } from "@/components/diagnostic-dashboard";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DiagnosticIdPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params?.id as string | undefined;
   const [data, setData] = useState<DiagnosticData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,6 +33,7 @@ export default function DiagnosticIdPage() {
           clinic_name: string;
           narrative: string;
           hidden_leaks: string[];
+          bottlenecks?: DiagnosticData["bottlenecks"];
           metrics: DiagnosticData["metrics"];
           projections_90: Record<string, unknown>;
           projections_12: Record<string, unknown>;
@@ -43,6 +43,7 @@ export default function DiagnosticIdPage() {
           clinic_name: json.clinic_name,
           narrative: json.narrative,
           hidden_leaks: json.hidden_leaks ?? [],
+          bottlenecks: json.bottlenecks ?? [],
           metrics: json.metrics,
           projections_90: json.projections_90 ?? {},
           projections_12: json.projections_12 ?? {},
@@ -94,7 +95,7 @@ export default function DiagnosticIdPage() {
         <div className="mb-6">
           <Link href="/diagnostic">
             <Button variant="ghost" size="sm" className="text-muted-foreground">
-              ← New diagnostic
+              &larr; New diagnostic
             </Button>
           </Link>
         </div>

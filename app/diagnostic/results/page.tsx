@@ -6,6 +6,7 @@ import Link from "next/link";
 import { DiagnosticDashboard, type DiagnosticData } from "@/components/diagnostic-dashboard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Bottleneck } from "@/lib/mcp";
 
 function normalizeStoredResult(raw: unknown): DiagnosticData | null {
   if (!raw || typeof raw !== "object") return null;
@@ -20,6 +21,8 @@ function normalizeStoredResult(raw: unknown): DiagnosticData | null {
     clinic_name: (o.clinic_name as string) ?? "Your Clinic",
     narrative: (o.narrative as string) ?? "",
     hidden_leaks: Array.isArray(o.hidden_leaks) ? o.hidden_leaks : [],
+    bottlenecks: Array.isArray(o.bottlenecks) ? (o.bottlenecks as Bottleneck[]) : [],
+    input_data: input,
     metrics: {
       current_monthly_revenue: monthly,
       revenue_lift_pct: revLift,
@@ -86,7 +89,7 @@ export default function DiagnosticResultsPage() {
         <div className="mb-6">
           <Link href="/diagnostic">
             <Button variant="ghost" size="sm" className="text-muted-foreground">
-              ← New diagnostic
+              &larr; New diagnostic
             </Button>
           </Link>
         </div>

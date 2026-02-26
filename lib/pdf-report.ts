@@ -14,17 +14,14 @@ export async function generatePdfReport(
   const margin = 18;
   let y = 20;
 
-  const addText = (
-    text: string,
-    opts: { fontSize?: number; color?: string; style?: "normal" | "bold" } = {}
-  ) => {
-    doc.setFontSize(opts.fontSize ?? 10);
-    if (opts.color) doc.setTextColor(opts.color);
-    if (opts.style) doc.setFont("helvetica", opts.style);
-    doc.text(text, margin, y);
-    y += (opts.fontSize ?? 10) * 0.5 + 2;
-  };
+  function ensureSpace(needed: number) {
+    if (y + needed > 270) {
+      doc.addPage();
+      y = 20;
+    }
+  }
 
+  // Header
   doc.setTextColor(13, 148, 136);
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
@@ -38,7 +35,7 @@ export async function generatePdfReport(
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text(`${data.clinic_name} — Autonomy Diagnostic Report`, margin, y);
+  doc.text(`${data.clinic_name} \u2014 Autonomy Diagnostic Report`, margin, y);
   y += 8;
 
   doc.setFontSize(9);
@@ -56,6 +53,7 @@ export async function generatePdfReport(
   doc.line(margin, y, pageW - margin, y);
   y += 10;
 
+  // Key Metrics
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 0, 0);
@@ -66,7 +64,7 @@ export async function generatePdfReport(
   doc.setFontSize(10);
   const metrics = [
     ["Revenue lift", formatPercent(data.metrics.revenue_lift_pct)],
-    ["12‑month total savings", formatCurrency(data.metrics.total_savings)],
+    ["12\u2011month total savings", formatCurrency(data.metrics.total_savings)],
     ["Staff time reduction", formatPercent(data.metrics.staff_reduction_pct)],
     ["Projected payback", `${data.metrics.payback_months} months`],
     ["Staff hours saved/week", `${Math.round(data.metrics.staff_hours_saved_per_week)} hrs`],
@@ -82,6 +80,7 @@ export async function generatePdfReport(
   });
   y += 6;
 
+  // Charts snapshot
   if (chartContainer) {
     try {
       const canvas = await html2canvas(chartContainer, {
@@ -93,38 +92,77 @@ export async function generatePdfReport(
       const img = canvas.toDataURL("image/png");
       const imgW = pageW - 2 * margin;
       const imgH = (canvas.height * imgW) / canvas.width;
-      if (y + imgH > 270) {
-        doc.addPage();
-        y = 20;
-      }
+      ensureSpace(Math.min(imgH, 120));
       doc.addImage(img, "PNG", margin, y, imgW, Math.min(imgH, 120));
       y += Math.min(imgH, 120) + 8;
-    } catch (_) {
+    } catch {
       // skip charts if capture fails
     }
   }
 
+  // Bottlenecks
+  const bottlenecks = data.bottlenecks ?? [];
+  if (bottlenecks.length > 0) {
+    ensureSpace(20);
+    doc.setDrawColor(234, 179, 8);
+    doc.setLineWidth(0.3);
+    doc.line(margin, y, pageW - margin, y);
+    y += 8;
+
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(180, 130, 0);
+    doc.text("Critical Operational Bottlenecks Identified", margin, y);
+    y += 8;
+
+    doc.setTextColor(0, 0, 0);
+    bottlenecks.forEach((b) => {
+      ensureSpace(28);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text(b.name, margin, y);
+      y += 5;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      const impactStr = `$${(b.impactDollars / 1000).toFixed(1)}k/mo (${b.impactPercent}% of revenue)`;
+      const ciStr = `${b.confidence}% CI: $${(b.ciLow / 1000).toFixed(1)}k\u2013$${(b.ciHigh / 1000).toFixed(1)}k`;
+      doc.text(`Impact: ${impactStr}  |  ${ciStr}`, margin + 2, y);
+      y += 5;
+
+      doc.setTextColor(80, 80, 80);
+      const descLines = doc.splitTextToSize(b.description, pageW - 2 * margin - 4);
+      descLines.forEach((line: string) => {
+        ensureSpace(5);
+        doc.text(line, margin + 2, y);
+        y += 4.5;
+      });
+      doc.setTextColor(0, 0, 0);
+      y += 4;
+    });
+    y += 4;
+  }
+
+  // Executive summary
+  ensureSpace(20);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
   doc.text("Executive summary", margin, y);
   y += 6;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   const split = doc.splitTextToSize(data.narrative, pageW - 2 * margin);
   split.forEach((line: string) => {
-    if (y > 270) {
-      doc.addPage();
-      y = 20;
-    }
+    ensureSpace(5);
     doc.text(line, margin, y);
     y += 5;
   });
   y += 8;
 
-  if (y > 250) {
-    doc.addPage();
-    y = 20;
-  }
+  // CTA footer
+  ensureSpace(20);
   doc.setDrawColor(234, 179, 8);
   doc.setLineWidth(0.3);
   doc.line(margin, y, pageW - margin, y);
@@ -141,7 +179,7 @@ export async function generatePdfReport(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.text(
-    "Book a pilot call — typically $5,000–$15,000 for a 90‑day pilot.",
+    "Book a pilot call \u2014 typically $5,000\u2013$15,000 for a 90\u2011day pilot.",
     margin,
     y
   );

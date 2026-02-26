@@ -75,6 +75,7 @@ export default function DiagnosticPage() {
             clinic_name: values.clinic_name || "Your Clinic",
             narrative: data.narrative,
             hidden_leaks: data.hidden_leaks ?? [],
+            bottlenecks: data.bottlenecks ?? [],
             projections: data.projections ?? {},
             input_data: values,
           })
