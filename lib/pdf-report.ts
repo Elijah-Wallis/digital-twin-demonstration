@@ -35,7 +35,7 @@ export async function generatePdfReport(
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text(`${data.clinic_name} \u2014 Autonomy Diagnostic Report`, margin, y);
+  doc.text(`${data.clinic_name} \u2014 Diagnostic Report`, margin, y);
   y += 8;
 
   doc.setFontSize(9);
@@ -57,28 +57,35 @@ export async function generatePdfReport(
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 0, 0);
-  doc.text("Key metrics", margin, y);
+  doc.text("Key Metrics", margin, y);
   y += 8;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  const metrics = [
-    ["Revenue lift", formatPercent(data.metrics.revenue_lift_pct)],
-    ["12\u2011month total savings", formatCurrency(data.metrics.total_savings)],
-    ["Staff time reduction", formatPercent(data.metrics.staff_reduction_pct)],
-    ["Projected payback", `${data.metrics.payback_months} months`],
-    ["Staff hours saved/week", `${Math.round(data.metrics.staff_hours_saved_per_week)} hrs`],
-    ["Recommended pilot", formatCurrency(data.metrics.recommended_pilot_value)],
+  const m = data.metrics;
+  const liftDollars = Math.round(m.current_monthly_revenue * (m.revenue_lift_pct / 100));
+  const roi = m.roi_multiple ?? Math.round(m.total_savings / m.recommended_pilot_value);
+
+  const metrics: [string, string, string][] = [
+    ["Revenue on the table", formatPercent(m.revenue_lift_pct), `${formatCurrency(liftDollars)}/mo currently uncaptured`],
+    ["12-month recovered value", formatCurrency(m.total_savings), "Sum of all bottlenecks fixed over 12 months"],
+    ["Admin time eliminated", formatPercent(m.staff_reduction_pct), `${Math.round(m.staff_hours_saved_per_week)} hrs/week freed from manual work`],
+    ["Time to payback", `${m.payback_months} month${m.payback_months !== 1 ? "s" : ""}`, "Investment pays for itself, then pure upside"],
+    ["Pilot investment", formatCurrency(m.recommended_pilot_value), `${roi}x projected return`],
   ];
-  const labelWidth = 52;
-  metrics.forEach(([label, value]) => {
-    doc.text(`${label}: `, margin, y);
+
+  metrics.forEach(([label, value, detail]) => {
     doc.setFont("helvetica", "bold");
-    doc.text(value, margin + labelWidth, y);
+    doc.text(`${label}: ${value}`, margin, y);
     doc.setFont("helvetica", "normal");
-    y += 6;
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(detail, margin + 2, y + 4);
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    y += 10;
   });
-  y += 6;
+  y += 4;
 
   // Charts snapshot
   if (chartContainer) {
@@ -109,10 +116,16 @@ export async function generatePdfReport(
     doc.line(margin, y, pageW - margin, y);
     y += 8;
 
+    const totalLeak = bottlenecks.reduce((s, b) => s + b.impactDollars, 0);
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(180, 130, 0);
-    doc.text("Critical Operational Bottlenecks Identified", margin, y);
+    doc.text("Critical Operational Bottlenecks", margin, y);
+    y += 6;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+    doc.text(`${bottlenecks.length} bottlenecks identified totaling ${formatCurrency(totalLeak)}/month in recoverable revenue`, margin, y);
     y += 8;
 
     doc.setTextColor(0, 0, 0);
@@ -149,7 +162,7 @@ export async function generatePdfReport(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(0, 0, 0);
-  doc.text("Executive summary", margin, y);
+  doc.text("Executive Summary", margin, y);
   y += 6;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);

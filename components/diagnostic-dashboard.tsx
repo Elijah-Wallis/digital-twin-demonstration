@@ -73,6 +73,33 @@ export type DiagnosticData = {
   projections_12: Record<string, unknown>;
 };
 
+function getMetricInsight(key: string, data: DiagnosticData): string {
+  const m = data.metrics;
+  const monthly = m.current_monthly_revenue;
+  const liftDollars = Math.round(monthly * (m.revenue_lift_pct / 100));
+
+  switch (key) {
+    case "revenue_lift_pct":
+      return `That\u2019s ${formatCurrency(liftDollars)}/mo sitting on the table right now \u2014 money your practice is earning but never collecting.`;
+    case "staff_hours_saved_per_week":
+      return `${Math.round(m.staff_hours_saved_per_week / 8)} full work-days every month your team spends on tasks a machine handles better, faster, and 24/7.`;
+    case "payback_months":
+      return m.payback_months <= 2
+        ? "The investment pays for itself almost immediately \u2014 everything after is pure upside."
+        : `In ${m.payback_months} months the system has paid for itself. Every month after is pure profit.`;
+    case "total_savings":
+      return `This isn\u2019t theoretical \u2014 it\u2019s the sum of every no-show recovered, every gap filled, and every hour of admin eliminated over 12 months.`;
+    case "staff_reduction_pct":
+      return "Not layoffs \u2014 liberation. Your team stops doing robot work and starts doing the high-value patient care they were hired for.";
+    case "recommended_pilot_value": {
+      const roi = m.roi_multiple ?? Math.round(m.total_savings / m.recommended_pilot_value);
+      return `${roi}x projected return. For every dollar in, you get ${roi} back in recovered revenue and eliminated waste.`;
+    }
+    default:
+      return "";
+  }
+}
+
 const METRIC_CARDS: Array<{
   key: keyof DiagnosticData["metrics"];
   label: string;
@@ -81,37 +108,37 @@ const METRIC_CARDS: Array<{
 }> = [
   {
     key: "revenue_lift_pct",
-    label: "Revenue lift",
+    label: "Revenue you\u2019re leaving on the table",
     format: (v) => formatPercent(v),
     icon: TrendingUp,
   },
   {
     key: "staff_hours_saved_per_week",
-    label: "Staff hours saved/week",
+    label: "Staff hours freed per week",
     format: (v) => `${Math.round(v)} hrs`,
     icon: Clock,
   },
   {
     key: "payback_months",
-    label: "Projected payback",
-    format: (v) => `${v} months`,
+    label: "Time to full payback",
+    format: (v) => `${v} month${v !== 1 ? "s" : ""}`,
     icon: Target,
   },
   {
     key: "total_savings",
-    label: "12\u2011mo total savings",
+    label: "12\u2011month recovered value",
     format: formatCurrency,
     icon: DollarSign,
   },
   {
     key: "staff_reduction_pct",
-    label: "Staff time reduction",
+    label: "Admin time eliminated",
     format: (v) => formatPercent(v),
     icon: Users,
   },
   {
     key: "recommended_pilot_value",
-    label: "Recommended pilot",
+    label: "Pilot investment",
     format: formatCurrency,
     icon: Activity,
   },
@@ -224,21 +251,22 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
 
   const barData = [
     { name: "Current", revenue: currentYear, fill: "hsl(var(--muted-foreground) / 0.5)" },
-    { name: "Projected", revenue: projected, fill: "hsl(var(--primary))" },
+    { name: "With Eve", revenue: projected, fill: "hsl(var(--primary))" },
   ];
 
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  const liftPerMonth = (projected - currentYear) / 12;
   const lineData = months.map((m) => ({
     month: `Month ${m}`,
     current: Math.round((currentYear / 12) * m),
-    projected: Math.round((projected / 12) * m),
+    projected: Math.round((currentYear / 12) * m + liftPerMonth * m * (m / 12)),
   }));
 
-  const staffManual = Math.max(0, 100 - data.metrics.staff_reduction_pct);
-  const staffFreed = data.metrics.staff_reduction_pct;
+  const staffManual = Math.max(0, 100 - Math.round(data.metrics.staff_reduction_pct));
+  const staffFreed = Math.round(data.metrics.staff_reduction_pct);
   const pieData = [
     { name: "Manual (current)", value: staffManual, fill: "hsl(var(--muted-foreground) / 0.6)" },
-    { name: "Freed by autonomy", value: staffFreed, fill: "hsl(var(--primary))" },
+    { name: "Freed by Eve", value: staffFreed, fill: "hsl(var(--primary))" },
   ];
 
   const handleDownloadPdf = useCallback(() => {
@@ -309,7 +337,7 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
 
       setIsDeeperRun(true);
       setDeeperOpen(false);
-      toast.success("Deeper ontology twin complete — projections refined");
+      toast.success("Deeper analysis complete \u2014 projections refined with higher confidence");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -318,13 +346,14 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
   }
 
   const bottlenecks = data.bottlenecks ?? [];
+  const totalBottleneckMonthly = bottlenecks.reduce((s, b) => s + b.impactDollars, 0);
 
   return (
     <div ref={containerRef} className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            {data.clinic_name} — Diagnostic Report
+            {data.clinic_name} \u2014 Diagnostic Report
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             Eve Clinic Autonomy
@@ -344,6 +373,7 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
         {METRIC_CARDS.map(({ key, label, format, icon: Icon }) => {
           const value = data.metrics[key];
           const num = typeof value === "number" ? value : 0;
+          const insight = getMetricInsight(key, data);
           return (
             <Card
               key={key}
@@ -359,8 +389,10 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-foreground">{format(num)}</p>
-                {(key === "revenue_lift_pct" || key === "total_savings" || key === "staff_reduction_pct") && (
-                  <p className="text-xs text-primary mt-1">vs. current state</p>
+                {insight && (
+                  <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                    {insight}
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -373,7 +405,7 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
         <Card className="border-border/80 bg-card/95">
           <CardHeader>
             <CardTitle className="text-base">Current vs projected revenue</CardTitle>
-            <CardDescription>12\u2011month comparison</CardDescription>
+            <CardDescription>12\u2011month comparison \u2014 the gap is money you\u2019re currently losing</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
@@ -390,8 +422,8 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
 
         <Card className="border-border/80 bg-card/95">
           <CardHeader>
-            <CardTitle className="text-base">12\u2011month trajectory</CardTitle>
-            <CardDescription>Cumulative revenue</CardDescription>
+            <CardTitle className="text-base">12\u2011month revenue trajectory</CardTitle>
+            <CardDescription>Eve\u2019s impact compounds as automation scales</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
@@ -404,22 +436,8 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
                   labelFormatter={(_, payload) => payload?.[0]?.payload?.month}
                 />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="current"
-                  name="Current"
-                  stroke="hsl(var(--muted-foreground))"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="projected"
-                  name="Projected"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2}
-                  dot={false}
-                />
+                <Line type="monotone" dataKey="current" name="Current" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="projected" name="With Eve" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -429,8 +447,8 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
       {/* Staff Allocation Pie */}
       <Card className="border-border/80 bg-card/95">
         <CardHeader>
-          <CardTitle className="text-base">Staff allocation</CardTitle>
-          <CardDescription>Before vs after autonomy</CardDescription>
+          <CardTitle className="text-base">Where your team\u2019s time actually goes</CardTitle>
+          <CardDescription>Admin vs. patient-facing \u2014 before and after Eve</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={220}>
@@ -459,17 +477,23 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
       {/* Critical Operational Bottlenecks */}
       {bottlenecks.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="h-6 w-6 text-accent" />
-            <h2 className="text-xl font-bold text-accent">
-              Critical Operational Bottlenecks Identified
-            </h2>
-            {isDeeperRun && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-3 py-0.5 text-xs font-medium text-primary">
-                <Zap className="h-3 w-3" />
-                Deep Ontology
-              </span>
-            )}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-6 w-6 text-accent" />
+              <h2 className="text-xl font-bold text-accent">
+                Critical Operational Bottlenecks Identified
+              </h2>
+              {isDeeperRun && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-3 py-0.5 text-xs font-medium text-primary">
+                  <Zap className="h-3 w-3" />
+                  Deep Ontology
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Your practice is leaking an estimated <span className="text-accent font-semibold">{formatCurrency(totalBottleneckMonthly)}/mo</span> across {bottlenecks.length} identified bottlenecks.
+              Each one is a specific, fixable problem \u2014 not a vague suggestion.
+            </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {bottlenecks.map((b, i) => (
@@ -499,67 +523,33 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
                     Deeper Ontology Twin Analysis
                   </DialogTitle>
                   <DialogDescription>
-                    Provide additional operational data for Palantir-level precision.
-                    All fields are optional — more data means tighter confidence intervals.
+                    Provide additional operational data for higher precision.
+                    All fields are optional \u2014 more data means tighter confidence intervals and more specific bottleneck identification.
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleDeeperSubmit} className="grid gap-4 mt-2">
                   <div className="grid gap-2">
                     <Label htmlFor="staff_hourly_cost">Staff Hourly Cost ($)</Label>
-                    <Input
-                      id="staff_hourly_cost"
-                      type="number"
-                      placeholder="e.g. 28"
-                      value={staffHourlyCost}
-                      onChange={(e) => setStaffHourlyCost(e.target.value)}
-                      className="bg-background/50"
-                    />
+                    <Input id="staff_hourly_cost" type="number" placeholder="e.g. 28" value={staffHourlyCost} onChange={(e) => setStaffHourlyCost(e.target.value)} className="bg-background/50" />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="marketing_spend">Monthly Marketing Spend ($)</Label>
-                    <Input
-                      id="marketing_spend"
-                      type="number"
-                      placeholder="e.g. 6000"
-                      value={marketingSpend}
-                      onChange={(e) => setMarketingSpend(e.target.value)}
-                      className="bg-background/50"
-                    />
+                    <Input id="marketing_spend" type="number" placeholder="e.g. 6000" value={marketingSpend} onChange={(e) => setMarketingSpend(e.target.value)} className="bg-background/50" />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="inventory_value">Current Inventory Value ($)</Label>
-                    <Input
-                      id="inventory_value"
-                      type="number"
-                      placeholder="e.g. 12000"
-                      value={inventoryValue}
-                      onChange={(e) => setInventoryValue(e.target.value)}
-                      className="bg-background/50"
-                    />
+                    <Input id="inventory_value" type="number" placeholder="e.g. 12000" value={inventoryValue} onChange={(e) => setInventoryValue(e.target.value)} className="bg-background/50" />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="csv_upload">Operational CSV (optional)</Label>
-                    <Input
-                      id="csv_upload"
-                      type="file"
-                      accept=".csv"
-                      onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)}
-                      className="bg-background/50 file:text-primary file:font-medium"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Upload scheduling, revenue, or appointment data for deeper analysis.
-                    </p>
+                    <Input id="csv_upload" type="file" accept=".csv" onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)} className="bg-background/50 file:text-primary file:font-medium" />
+                    <p className="text-xs text-muted-foreground">Upload scheduling, revenue, or appointment data for deeper analysis.</p>
                   </div>
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="w-full mt-2 bg-primary text-primary-foreground hover:bg-primary/90"
-                    disabled={deeperLoading}
-                  >
+                  <Button type="submit" size="lg" className="w-full mt-2 bg-primary text-primary-foreground hover:bg-primary/90" disabled={deeperLoading}>
                     {deeperLoading ? (
                       <span className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Running deeper analysis…
+                        Running deeper analysis\u2026
                       </span>
                     ) : (
                       "Run Deeper Ontology Twin"
@@ -569,7 +559,7 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
               </DialogContent>
             </Dialog>
             <p className="text-sm text-muted-foreground max-w-md">
-              Provide more data &rarr; get Palantir-level precision and exact fix plan
+              Provide more data \u2192 get higher-precision numbers and an exact fix plan for every bottleneck
             </p>
           </CardContent>
         </Card>
@@ -579,15 +569,13 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
       {data.hidden_leaks.length > 0 && (
         <Card className="border-border/80 bg-card/95">
           <CardHeader>
-            <CardTitle className="text-base">Hidden leaks (ontology)</CardTitle>
-            <CardDescription>Identified inefficiencies</CardDescription>
+            <CardTitle className="text-base">Where the money is going</CardTitle>
+            <CardDescription>Operational leaks identified by the diagnostic</CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
               {data.hidden_leaks.map((leak, i) => (
-                <li key={i} className="leading-relaxed">
-                  {leak}
-                </li>
+                <li key={i} className="leading-relaxed">{leak}</li>
               ))}
             </ul>
           </CardContent>
