@@ -99,7 +99,7 @@ export default function DiagnosticPage() {
           <header className="text-center mb-10 animate-fade-in-up">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-sm text-primary mb-6">
               <Activity className="h-4 w-4" />
-              <span>Palantir for Clinics</span>
+              <span>Eve Clinic Autonomy</span>
             </div>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl text-foreground">
               Free Eve Clinic Autonomy Diagnostic

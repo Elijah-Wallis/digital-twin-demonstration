@@ -29,7 +29,7 @@ export async function generatePdfReport(
   doc.setTextColor(100, 100, 100);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.text("Palantir for Clinics", margin + 18, y);
+  doc.text("Eve Clinic Autonomy", margin + 18, y);
   y += 12;
 
   doc.setTextColor(0, 0, 0);
@@ -171,15 +171,7 @@ export async function generatePdfReport(
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
   doc.text(
-    "Ready to run on full ontology autonomy in 90 days?",
-    margin,
-    y
-  );
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text(
-    "Book a pilot call \u2014 typically $5,000\u2013$15,000 for a 90\u2011day pilot.",
+    "Ready to Double the Money you make in less than 90 days?",
     margin,
     y
   );

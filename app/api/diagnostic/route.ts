@@ -30,8 +30,8 @@ async function generateNarrative(
       `${clinicName} can unlock significant efficiency and revenue gains with Eve's ontology-driven autonomy. ` +
       `Our diagnostic shows a potential revenue lift of ${result.revenue_lift}% and staff time savings of ${result.staff_reduction_pct}%, ` +
       `with total projected savings of $${Math.round(result.total_savings).toLocaleString()} over 12 months. ` +
-      `Hidden operational leaks—from no-shows to manual scheduling—are quantified and addressable through a structured 90-day pilot. ` +
-      `We recommend a pilot investment of $${result.recommended_pilot_value.toLocaleString()} to $15,000 to deploy full autonomy and capture these gains.`
+      `Hidden operational leaks—from no-shows to manual scheduling—are quantified and addressable through Eve's autonomy engine. ` +
+      `We recommend an investment of $${result.recommended_pilot_value.toLocaleString()} to $15,000 to deploy full autonomy and capture these gains.`
     );
   }
   try {
@@ -73,8 +73,8 @@ async function generateNarrative(
     `${clinicName} can unlock significant efficiency and revenue gains with Eve's ontology-driven autonomy. ` +
     `Our diagnostic shows a potential revenue lift of ${result.revenue_lift}% and staff time savings of ${result.staff_reduction_pct}%, ` +
     `with total projected savings of $${Math.round(result.total_savings).toLocaleString()} over 12 months. ` +
-    `Hidden operational leaks—from no-shows to manual scheduling—are quantified and addressable through a structured 90-day pilot. ` +
-    `We recommend a pilot investment of $${result.recommended_pilot_value.toLocaleString()} to $15,000 to deploy full autonomy and capture these gains.`
+    `Hidden operational leaks—from no-shows to manual scheduling—are quantified and addressable through Eve's autonomy engine. ` +
+    `We recommend an investment of $${result.recommended_pilot_value.toLocaleString()} to $15,000 to deploy full autonomy and capture these gains.`
   );
 }
 

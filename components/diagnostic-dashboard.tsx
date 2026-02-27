@@ -327,7 +327,7 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
             {data.clinic_name} — Diagnostic Report
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Eve Clinic Autonomy &bull; Palantir for Clinics
+            Eve Clinic Autonomy
           </p>
         </div>
         <Button
@@ -604,8 +604,7 @@ export function DiagnosticDashboard({ data: initialData }: { data: DiagnosticDat
             {data.narrative}
           </p>
           <p className="mt-4 text-sm text-primary font-medium">
-            Ready to run on full ontology autonomy in 90 days? Book a pilot call — typically
-            $5,000–$15,000 for a 90\u2011day pilot.
+            Ready to Double the Money you make in less than 90 days?
           </p>
         </CardContent>
       </Card>
